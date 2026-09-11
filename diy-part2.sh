@@ -11,8 +11,6 @@
 function config_del(){
     yes="CONFIG_$1=y"
     no="# CONFIG_$1 is not set"
-    # no="CONFIG_$1=n"
-
     sed -i "s/$yes/$no/" .config
 }
 
@@ -58,7 +56,7 @@ function config_device_del(){
     device="TARGET_DEVICE_$1"
     packages="TARGET_DEVICE_PACKAGES_$1"
 
-    packages_list="CONFIG_TARGET_DEVICE_PACKAGES_$1="""    
+    packages_list="CONFIG_TARGET_DEVICE_PACKAGES_$1="""
     deleted_packages_list="# CONFIG_TARGET_DEVICE_PACKAGES_$1 is not set"
 
     config_del $device
@@ -91,10 +89,10 @@ function config_device_keep_only(){
 
 config_device_list
 
+# 只保留 CMCC‑XR30 设备
 config_device_keep_only "cmcc_xr30"
 
-# Modify default theme
-# sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
+# Modify default theme Argon
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' $(find ./feeds/luci/collections/ -type f -name "Makefile")
 config_package_add luci-theme-argon
 
@@ -105,11 +103,16 @@ config_package_del luci-app-ssr-plus_INCLUDE_ShadowsocksR_NONE_Server
 config_package_del luci-theme-bootstrap-mod
 config_package_del luci-app-ssr-plus_INCLUDE_ShadowsocksR_Rust_Client
 config_package_del luci-app-ssr-plus_INCLUDE_ShadowsocksR_Rust_Server
-# Add custom packages
+
+# ========== 自定义软件包开始 ==========
+## QModem 5G模组管理 (USB模组，关闭PCIe MHI依赖消除警告)
+config_package_add luci-app-qmodem
+config_package_del kmod-mhi-wwan
+config_package_del quectel-CM-5G
 
 ## Web Terminal
 config_package_add luci-app-ttyd
-## IP-Mac Binding
+## IP‑Mac Binding
 config_package_add luci-app-arpbind
 ## Wake on Lan
 config_package_add luci-app-wol
@@ -119,7 +122,8 @@ config_package_add qrencode
 config_package_add fish
 ## Temporarily disable USB3.0
 config_package_add luci-app-usb3disable
-## USB
+
+## USB 5G 相关内核模块
 config_package_add kmod-usb-net-huawei-cdc-ncm
 config_package_add kmod-usb-net-ipheth
 config_package_add kmod-usb-net-aqc111
@@ -130,53 +134,57 @@ config_package_add kmod-usb-ohci
 config_package_add kmod-usb-uhci
 config_package_add usb-modeswitch
 config_package_add sendat
-## bbr
+
+## bbr 拥塞控制
 config_package_add kmod-tcp-bbr
 ## coremark cpu 跑分
 config_package_add coremark
-## autocore + lm-sensors-detect： cpu 频率、温度
+## autocore + lm‑sensors‑detect： cpu 频率、温度
 config_package_add autocore
 config_package_add lm-sensors-detect
-## autoreboot
+## 定时重启
 config_package_add luci-app-autoreboot
-## 多拨
+## 多拨 负载均衡 mwan3
 config_package_add kmod-macvlan
 config_package_add mwan3
 config_package_add luci-app-mwan3
-# ## frpc
+
+## frpc (注释，如需启用取消下面注释)
 # config_package_add luci-app-frpc
-## mosdns
+## mosdns (注释)
 # config_package_add luci-app-mosdns
-## curl
+
+## 工具
 config_package_add curl
-## socat
 config_package_add socat
-## disk
+## 磁盘工具
 config_package_add gdisk
 config_package_add sgdisk
-## Vim-Full
+## Vim‑Full
 config_package_add vim-full
-## iperf
+## iperf 测速
 config_package_add iperf
 
-# MentoHust
+# MentoHUST 锐捷认证
 git clone https://github.com/sbwml/luci-app-mentohust package/mentohust
 config_package_add luci-app-mentohust
 
-# Third-party packages
+# Third‑party custom packages
 mkdir -p package/custom
 git clone --depth 1  https://github.com/217heidai/OpenWrt-Packages.git package/custom
 clean_packages package/custom
 
-## golang
+## 替换golang版本
 rm -rf feeds/packages/lang/golang
 mv package/custom/golang feeds/packages/lang/
 
-## Passwall
+## Passwall2 科学上网
 config_package_add luci-app-passwall2
 config_package_add iptables-mod-socket
 config_package_add luci-app-passwall2_Iptables_Transparent_Proxy
 config_package_add luci-app-passwall2_INCLUDE_Hysteria
+
+# 关闭不需要的passwall2组件，缩小固件体积
 config_package_del luci-app-passwall2_Nftables_Transparent_Proxy
 config_package_del luci-app-passwall2_INCLUDE_Shadowsocks_Libev_Client
 config_package_del luci-app-passwall2_INCLUDE_Shadowsocks_Libev_Server
@@ -187,6 +195,7 @@ config_package_del luci-app-passwall2_INCLUDE_ShadowsocksR_Libev_Server
 config_package_del luci-app-passwall2_INCLUDE_Trojan_Plus
 config_package_del luci-app-passwall2_INCLUDE_Simple_Obfs
 config_package_del luci-app-passwall2_INCLUDE_tuic_client
+
 config_package_del shadowsocks-libev-config
 config_package_del shadowsocks-libev-ss-local
 config_package_del shadowsocks-libev-ss-redir
@@ -196,39 +205,31 @@ config_package_del shadowsocksr-libev-ssr-redir
 config_package_del shadowsocks-libev-ssr-server
 config_package_del shadowsocks-rust
 config_package_del simple-obfs
-rm -r package/custom/shadowsocks-rust
-rm -r package/custom/simple-obfs
+rm -rf package/custom/shadowsocks-rust
+rm -rf package/custom/simple-obfs
 
-## 定时任务。重启、关机、重启网络、释放内存、系统清理、网络共享、关闭网络、自动检测断网重连、MWAN3负载均衡检测重连、自定义脚本等10多个功能
+## 定时任务工具
 config_package_add luci-app-autotimeset
 config_package_add luci-lib-ipkg
 
-## byobu, tmux
+## 终端复用
 config_package_add byobu
 config_package_add tmux
 
-# ## Frp Latest version patch
-
+# ## Frp Latest version patch (已注释，需要再打开)
 # FRP_MAKEFILE_PATH="feeds/packages/net/frp/Makefile"
-
 # FRP_LATEST_RELEASE=$(curl -s https://api.github.com/repos/fatedier/frp/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
-
 # if [ -z "$FRP_LATEST_RELEASE" ]; then
-  # echo "无法获取最新的 Release 名称"
-  # exit 1
+#   echo "无法获取最新的 Release 名称"
+#   exit 1
 # fi
-
 # FRP_LATEST_VERSION=${FRP_LATEST_RELEASE#v}
-
 # FRP_PKG_NAME="frp"
 # FRP_PKG_SOURCE="${FRP_PKG_NAME}-${FRP_LATEST_VERSION}.tar.gz"
 # FRP_PKG_SOURCE_URL="https://codeload.github.com/fatedier/frp/tar.gz/v${FRP_LATEST_VERSION}?"
 # curl -L -o "$FRP_PKG_SOURCE" "$FRP_PKG_SOURCE_URL"
-
 # FRP_PKG_HASH=$(sha256sum "$FRP_PKG_SOURCE" | awk '{print $1}')
 # rm -r "$FRP_PKG_SOURCE"
-
 # sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=${FRP_LATEST_VERSION}/" "$FRP_MAKEFILE_PATH"
 # sed -i "s/^PKG_HASH:=.*/PKG_HASH:=${FRP_PKG_HASH}/" "$FRP_MAKEFILE_PATH"
-
 # echo "已更新 Makefile 中的 PKG_VERSION 和 PKG_HASH"
