@@ -174,9 +174,6 @@ mkdir -p package/custom
 git clone --depth 1  https://github.com/217heidai/OpenWrt-Packages.git package/custom
 clean_packages package/custom
 
-## 替换golang版本
-rm -rf feeds/packages/lang/golang
-mv package/custom/golang feeds/packages/lang/
 
 ## Passwall2 科学上网
 config_package_add luci-app-passwall2
